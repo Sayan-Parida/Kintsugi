@@ -1,5 +1,9 @@
 # Kintsugi
 
+The protected-guest validation driver, prerequisites and real execution procedure
+are documented in [LINUX-VALIDATION.md](LINUX-VALIDATION.md). Protected Linux
+execution remains pending.
+
 Version 0.1.0-alpha is an experimental CLI distribution. Protected Linux end-to-end
 validation remains pending. Production readiness has not been established.
 
