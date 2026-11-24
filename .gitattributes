@@ -1,4 +1,5 @@
 *.sh text eol=lf
+*.py text eol=lf
 /distribution/kintsugi text eol=lf
 /mvnw text eol=lf
 /mvnw.cmd text eol=crlf
