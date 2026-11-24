@@ -11,6 +11,11 @@
     <artifactId>orchestrator</artifactId>
     <dependencies>
         <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
             <groupId>dev.kintsugi</groupId>
             <artifactId>shirudo-cli</artifactId>
             <version>${project.version}</version>
