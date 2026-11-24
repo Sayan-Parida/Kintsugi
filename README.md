@@ -15,10 +15,13 @@ The standalone H2 shield fixture and protected-guest execution steps are in
 The harness supports independently identifiable, long-lived JVMs, repeated
 nonce-bound checks with fixed read-only queries, and process health records.
 The assessment core has no Spring dependencies. Spring Boot runs the command
-line orchestration. The Shirudo adapter module currently defines a build boundary
-and has no implemented verifier integration.
+line orchestration. The [Shirudo adapter](shirudo-cli/README.md) collects host reports
+and invokes the native verifier. The [coverage engine](assurance-core/COVERAGE.md)
+correlates approved host evidence, passive JVM startup clues and qualified
+behavioral observations against the intended shield and process lifetime.
 
-The Java 21 Maven build passed with 12 tests, including two concurrent fixture
+The Java 21 Maven build includes portable tests for evidence assessment, process
+identity, native CLI failure handling, two concurrent fixture
 JVMs and repeated baseline checks. The packaged fixture also passed a baseline
 smoke test. Windows directory protection required verification from a temporary
 copy whose source hashes matched the project.

@@ -40,9 +40,9 @@ temp/
 *.stderr
 
 # Upstream source checkouts
-shirudo/
-upstream/
-vendor/shirudo/
+/shirudo/
+/upstream/
+/vendor/shirudo/
 
 # Additional IDE metadata
 .classpath
