@@ -1,0 +1,51 @@
+target/
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials*
+secrets/
+keys/
+settings.xml
+toolchains.xml
+
+# Generated evidence, caches and scratch data
+work/
+tmp/
+temp/
+.cache/
+.m2/
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+*.class
+*.jar
+*.bee
+*.upatch
+*.tsv
+*.stderr
+
+# Upstream source checkouts
+shirudo/
+upstream/
+vendor/shirudo/
+
+# Additional IDE metadata
+.classpath
+.project
+.settings/
+*.sln.iml
