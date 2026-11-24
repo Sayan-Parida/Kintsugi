@@ -105,7 +105,7 @@ public final class ShirudoCli {
         try {
             doc = JSON.readTree(output.stdout());
             if (doc == null || !doc.isObject() || !doc.path("schema").isIntegralNumber()
-                    || doc.path("schema").intValue() != 1) {
+                    || !doc.path("schema").canConvertToInt() || doc.path("schema").intValue() != 1) {
                 throw new IOException("Unsupported schema");
             }
         } catch (IOException invalid) {

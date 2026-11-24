@@ -49,7 +49,9 @@ class ShirudoCliTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"oops", "{}", "{\"schema\":2}", "{\"schema\":1} {}",
+    @ValueSource(strings = {"oops", "{}", "{\"schema\":2}",
+            "{\"schema\":4294967297,\"verdict\":\"ok\",\"checks\":[{\"result\":\"ok\",\"text\":\"synthetic\"}]}",
+            "{\"schema\":1} {}",
             "{\"schema\":1,\"schema\":1}", "{\"schema\":1,\"verdict\":\"ok\",\"checks\":[]}"})
     void malformedOrUnsupportedVerifierOutputIsUnknown(String json) {
         assertEquals(ShirudoCli.State.UNKNOWN, parse(json, "verification", 0).state());

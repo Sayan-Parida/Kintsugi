@@ -41,14 +41,25 @@ record OperatorProfile(String verifier, String evidence, String nonce, Verificat
     }
 
     Receipt verify(String boot) {
+        try {
+            byte[] original = evidenceBytes();
+            Path snapshot = Files.createTempFile("kintsugi-evidence-", ".json");
+            try {
+                Files.write(snapshot, original);
+                return verifySnapshot(boot, snapshot, original);
+            } finally { Files.deleteIfExists(snapshot); }
+        } catch (IOException unavailable) {
+            return new Receipt(new ShirudoCli.Evidence(ShirudoCli.State.UNKNOWN, "evidence_file_unavailable",
+                    "", "", null, Instant.now(), java.util.List.of()), null, policy.expectedChain(), null);
+        }
+    }
+
+    private Receipt verifySnapshot(String boot, Path snapshot, byte[] original) {
         var cli = new ShirudoCli(Path.of(verifier), Duration.ofSeconds(10));
-        byte[] original = null;
-        try { original = evidenceBytes(); } catch (IOException unavailable) { }
-        var result = cli.verify(Path.of(evidence), nonce, policy);
+        var result = cli.verify(snapshot, nonce, policy);
         Epoch epoch = null;
         try {
-            if (result.state() == ShirudoCli.State.VERIFIED && original != null
-                    && java.util.Arrays.equals(original, evidenceBytes())) {
+            if (result.state() == ShirudoCli.State.VERIFIED) {
                 var json = new ObjectMapper().enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
                         .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
                 var document = json.readTree(original);

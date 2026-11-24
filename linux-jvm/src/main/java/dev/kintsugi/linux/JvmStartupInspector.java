@@ -20,6 +20,12 @@ public final class JvmStartupInspector {
     }
 
     public Identity identity(long pid) throws IOException {
+        Identity first = readIdentity(pid);
+        if (!first.equals(readIdentity(pid))) throw new IOException("Process identity changed during read");
+        return first;
+    }
+
+    private Identity readIdentity(long pid) throws IOException {
         Path base = proc.resolve(Long.toString(pid));
         String stat = read(base.resolve("stat"));
         String uid = read(base.resolve("status")).lines().filter(line -> line.startsWith("Uid:"))

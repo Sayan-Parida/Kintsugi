@@ -10,19 +10,31 @@ import java.util.concurrent.*;
 
 /** FD 0 receives the authorized child's stdout. FD 3 sends CHECK to its stdin. */
 final class FixturePipes {
+    private static final java.util.concurrent.atomic.AtomicBoolean ACTIVE = new java.util.concurrent.atomic.AtomicBoolean();
+    private static volatile boolean poisoned;
     static Result assess(Path proc, CoverageService service, Intent intent, JvmInventory.Snapshot inventory,
+                         JvmInventory.Candidate candidate, Path agent, OperatorProfile.Receipt receipt) throws Exception {
+        if (poisoned || !ACTIVE.compareAndSet(false, true)) throw new IOException("Fixture channel is unavailable");
+        try {
+            return assessExclusive(proc, service, intent, inventory, candidate, agent, receipt);
+        } finally { ACTIVE.set(false); }
+    }
+
+    private static Result assessExclusive(Path proc, CoverageService service, Intent intent, JvmInventory.Snapshot inventory,
                          JvmInventory.Candidate candidate, Path agent, OperatorProfile.Receipt receipt) throws Exception {
         var child = proc.resolve(Long.toString(candidate.pid())).resolve("fd");
         Path writer = proc.resolve("self/fd/3");
         samePipe(proc.resolve("self/fd/0"), child.resolve("1"));
         samePipe(writer, child.resolve("0"));
 
+        long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
         var task = new FutureTask<Result>(() -> {
             var ready = record(System.in);
             var session = service.openFixtureSession(true, intent, receipt.approved(), receipt.chain(),
                     receipt.verification(), ready, Duration.ofMinutes(1));
             var before = new JvmStartupInspector(proc).identity(candidate.pid());
             if (!before.equals(intent.process())) throw new IOException();
+            if (Thread.currentThread().isInterrupted() || System.nanoTime() >= deadline) throw new IOException();
             try (var out = Files.newOutputStream(writer, StandardOpenOption.WRITE)) {
                 out.write((session.command() + "\n").getBytes(StandardCharsets.US_ASCII));
             }
@@ -31,6 +43,10 @@ final class FixturePipes {
         });
         Thread.startVirtualThread(task);
         try { return task.get(5, TimeUnit.SECONDS); }
+        catch (TimeoutException | InterruptedException unavailable) {
+            poisoned = true;
+            throw unavailable;
+        }
         finally { task.cancel(true); }
     }
 

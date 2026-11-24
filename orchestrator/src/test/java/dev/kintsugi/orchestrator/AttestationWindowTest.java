@@ -9,6 +9,15 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Synthetic lifecycle contract tests. No native verification or protection is established here. */
 class AttestationWindowTest {
+    @Test void rejectsOpeningVerificationAfterAssessment() {
+        var a = profile("aa", HostState.VERIFIED_PRESENT, "a".repeat(64));
+        var b = profile("bb", HostState.VERIFIED_PRESENT, "a".repeat(64));
+        var first = receipt(a, ShirudoCli.State.VERIFIED);
+        var late = new OperatorProfile.Receipt(new ShirudoCli.Evidence(ShirudoCli.State.VERIFIED,
+                "SYNTHETIC", "", "", null, now, List.of()), first.approved(), first.chain(), first.epoch());
+        assertTrue(AttestationWindow.validate(a, late, b, receipt(b, ShirudoCli.State.VERIFIED),
+                now.minusSeconds(2), now).contains("attestation_window_invalid"));
+    }
     final Instant now = Instant.parse("2026-01-01T00:00:10Z");
     OperatorProfile profile(String nonce, HostState state, String chain) {
         return new OperatorProfile("/trusted/verifier", "/trusted/evidence", nonce,
@@ -19,7 +28,8 @@ class AttestationWindowTest {
                 new OperatorProfile.Mapping("boot", new Shield("sql", "a".repeat(64)), state));
     }
     OperatorProfile.Receipt receipt(OperatorProfile p, ShirudoCli.State state) {
-        return new OperatorProfile.Receipt(new ShirudoCli.Evidence(state, "SYNTHETIC", "", "", null, now, List.of()),
+        return new OperatorProfile.Receipt(new ShirudoCli.Evidence(state, "SYNTHETIC", "", "", null,
+                p.nonce().equals("aa") ? now.minusSeconds(3) : now, List.of()),
                 new Host(p.mapping().shield(), p.mapping().state(), now), p.policy().expectedChain(),
                 new OperatorProfile.Epoch(1, 2, 3, 10));
     }

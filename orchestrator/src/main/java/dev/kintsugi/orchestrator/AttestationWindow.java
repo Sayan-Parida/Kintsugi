@@ -22,7 +22,10 @@ final class AttestationWindow {
         if (open == null || first == null) return reasons;
         if (open.nonce().equalsIgnoreCase(close.nonce())) reasons.add("attestation_nonce_reused");
         Instant issued = Instant.parse(close.window().issued());
-        if (issued.isBefore(finished) || last.verification().collectedAt().isBefore(issued)
+        if (first.verification().collectedAt().isAfter(finished)
+                || first.verification().collectedAt().isBefore(Instant.parse(open.window().issued()))
+                || issued.isAfter(now) || issued.isBefore(finished) || last.verification().collectedAt().isBefore(issued)
+                || last.verification().collectedAt().isAfter(now)
                 || now.isAfter(Instant.parse(close.window().expires()))
                 || now.isAfter(Instant.parse(open.window().expires())))
             reasons.add("attestation_window_invalid");
