@@ -18,4 +18,4 @@ jobs:
           java-version: '21'
           cache: maven
       - run: sh ./mvnw --batch-mode --no-transfer-progress verify
-      - run: java -jar orchestrator/target/orchestrator-0.1.0-SNAPSHOT.jar inventory
+      - run: java -jar orchestrator/target/orchestrator-0.1.0-alpha.jar inventory

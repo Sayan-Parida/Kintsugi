@@ -1,10 +1,60 @@
 # Kintsugi
 
+Version 0.1.0-alpha is an experimental CLI distribution. Protected Linux end-to-end
+validation remains pending. Production readiness has not been established.
+
+## Install and remove
+
+Use Linux with Java 21 and a POSIX shell. The bundle scripts use standard Linux
+utilities including tar, sha256sum, sed, head, cp, cmp, mkdir, mktemp, mv and rm.
+Shirudo host verification additionally requires the trusted native verifier and
+its existing permissions and enrollment inputs. The distribution includes the
+application dependencies in its executable JAR. Java and Shirudo are installed separately.
+
+The GitHub Actions **Alpha distribution** workflow builds versioned artifacts
+when run manually or for tag `v0.1.0-alpha`. Download its artifact archive from
+the successful workflow run and extract it. The workflow uploads build artifacts
+and SHA-256 checksums. A checksum detects changed bytes and should be obtained
+from the trusted workflow run along with the artifacts.
+
+```sh
+sha256sum -c SHA256SUMS
+tar -xzf kintsugi-0.1.0-alpha-linux.tar.gz
+cd kintsugi-0.1.0-alpha
+sh install.sh
+export PATH="$HOME/.local/bin:$PATH"
+kintsugi --help
+kintsugi inventory --json
+```
+
+Installation defaults to `$HOME/.local/bin/kintsugi` and
+`$HOME/.local/lib/kintsugi` and requires no root access. Select Java using
+`JAVA_HOME` or PATH. Both launcher and installer check for Java 21.
+An existing installation is preserved and must be removed before replacement.
+For a custom absolute prefix use `sh install.sh --prefix /absolute/prefix`
+and add that prefix's bin directory to PATH.
+
+```sh
+kintsugi verify-host --profile=/secure/operator/run.json
+kintsugi assess --pid="$pid" --shield="$name" --digest="$payload_sha256" --json
+sh "$HOME/.local/lib/kintsugi/uninstall.sh"
+# Custom prefix: sh /absolute/prefix/lib/kintsugi/uninstall.sh --prefix /absolute/prefix
+```
+
+Removal deletes only the named installed files and preserves operator profiles
+and evidence. Profiles are supplied explicitly with `--profile` and
+`--closing-profile` as documented below. Store them in an operator-controlled
+directory. The installer does not create profiles or enroll trust.
+
+The standalone JAR also runs with `java -jar kintsugi-0.1.0-alpha.jar --help`.
+For a local distribution build run Maven verification, then
+`sh distribution/package.sh` on Linux. Artifacts appear in `target/dist`.
+
 Kintsugi is a Java 21 project for assessing Shirudo Java shield coverage in individual JVMs. Its Linux CLI inventories visible Java launchers, invokes Shirudo's native attestation verifier, and reports per-JVM evidence.
 
 ```sh
 sh ./mvnw verify
-jar=orchestrator/target/orchestrator-0.1.0-SNAPSHOT.jar
+jar=orchestrator/target/orchestrator-0.1.0-alpha.jar
 java -jar "$jar" --help
 java -jar "$jar" inventory --json
 java -jar "$jar" verify-host --profile=/secure/operator/run.json

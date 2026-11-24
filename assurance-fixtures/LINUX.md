@@ -6,7 +6,7 @@ Build from the Kintsugi root with Java 21.
 
 ```sh
 sh ./mvnw verify
-sha256sum assurance-fixtures/target/assurance-fixtures-0.1.0-SNAPSHOT.jar
+sha256sum assurance-fixtures/target/assurance-fixtures-0.1.0-alpha.jar
 ```
 
 Transfer that JAR to a private workload directory in the guest. The shaded JAR includes H2 2.3.232. All queries are scalar SELECTs against an isolated in-memory connection. The second query returns the literal string OR 2=2, which the upstream heuristic is expected to reject even though it is harmless data. The before/after controls must both pass.
@@ -34,7 +34,7 @@ S=/run/shirudo/runtime/usr/bin/shirudo
 Before deployment, start A as the ordinary workload user in terminal A. Use an absolute Java 21 executable and fixture path. Clear inherited launcher options for repeatability.
 
 ```sh
-env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS /path/to/jdk21/bin/java -XX:-EnableDynamicAgentLoading -jar /path/to/assurance-fixtures-0.1.0-SNAPSHOT.jar A 2>A.stderr | tee A.tsv
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS /path/to/jdk21/bin/java -XX:-EnableDynamicAgentLoading -jar /path/to/assurance-fixtures-0.1.0-alpha.jar A 2>A.stderr | tee A.tsv
 ```
 
 The process prints a ready record and waits on stdin. Type CHECK followed by a fresh canonical lowercase UUID, for example generate a request in a separate shell with `printf 'CHECK %s\n' "$(cat /proc/sys/kernel/random/uuid)"` and paste it into terminal A. Repeat three times. Expect control=scalar, discriminator=scalar, after_control=scalar, health=ok and behavior=baseline_observed. Keep A alive across deployment.
@@ -50,7 +50,7 @@ The administrator now loads the signed artifact with the independently expected 
 In terminal B as the same ordinary workload owner, launch B with the documented explicit startup-agent path. This isolates agent behavior from systemd manager environment propagation.
 
 ```sh
-env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS /path/to/jdk21/bin/java -XX:-EnableDynamicAgentLoading -javaagent:/run/shirudo-java/java-sql-inj.jar -jar /path/to/assurance-fixtures-0.1.0-SNAPSHOT.jar B 2>B.stderr | tee B.tsv
+env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS /path/to/jdk21/bin/java -XX:-EnableDynamicAgentLoading -javaagent:/run/shirudo-java/java-sql-inj.jar -jar /path/to/assurance-fixtures-0.1.0-alpha.jar B 2>B.stderr | tee B.tsv
 ```
 
 Challenge A and B three times each using fresh UUIDs. Compare label, instance UUID, PID, start instant, boot ID, PID namespace and kernel start ticks across all records. Verify PIDs and start ticks against administrator-observed procfs. A must retain baseline behavior. B must report discriminator=guard_exception, healthy controls and behavior=guard_observed. The expected SecurityException message is checked by the harness. Other errors yield inconclusive. The upstream agent writes its diagnostics to stderr. Preserve those files separately from protocol transcripts.

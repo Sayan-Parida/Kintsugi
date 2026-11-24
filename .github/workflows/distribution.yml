@@ -1,0 +1,40 @@
+name: Alpha distribution
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v0.1.0-alpha'
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - run: sh ./mvnw --batch-mode --no-transfer-progress verify
+      - run: sh distribution/package.sh
+      - name: Validate bundle and user installation
+        shell: bash
+        run: |
+          set -euo pipefail
+          (cd target/dist && sha256sum -c SHA256SUMS)
+          testdir=$(mktemp -d)
+          tar -xzf target/dist/kintsugi-0.1.0-alpha-linux.tar.gz -C "$testdir"
+          bundle="$testdir/kintsugi-0.1.0-alpha"
+          prefix="$testdir/local install"
+          sh "$bundle/install.sh" --prefix "$prefix"
+          "$prefix/bin/kintsugi" --help
+          "$prefix/bin/kintsugi" inventory --json
+          sh "$bundle/uninstall.sh" --prefix "$prefix"
+          test ! -e "$prefix/bin/kintsugi"
+          test ! -e "$prefix/lib/kintsugi"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kintsugi-0.1.0-alpha-linux
+          path: target/dist/*
+          if-no-files-found: error

@@ -1,0 +1,18 @@
+#!/bin/sh
+set -eu
+fail() { printf 'kintsugi: %s\n' "$*" >&2; exit 3; }
+[ "$(uname -s)" = Linux ] || fail "Linux is required."
+case "$0" in /*) self=$0 ;; *) self=$PWD/$0 ;; esac
+base=$(CDPATH= cd -- "$(dirname -- "$self")/../lib/kintsugi" 2>/dev/null && pwd) ||
+    fail "Installation is incomplete. Reinstall from the alpha bundle."
+[ -r "$base/kintsugi.jar" ] || fail "Missing readable application JAR."
+if [ -n "${JAVA_HOME:-}" ]; then
+    java=$JAVA_HOME/bin/java
+    [ -x "$java" ] || fail "JAVA_HOME must point to a Java 21 installation."
+else
+    java=$(command -v java) || fail "Java 21 is required. Set JAVA_HOME or add java to PATH."
+fi
+version=$("$java" -version 2>&1) || fail "Cannot start Java."
+major=$(printf '%s\n' "$version" | sed -n 's/.*version "\([0-9][0-9]*\).*/\1/p' | head -n 1)
+[ "$major" = 21 ] || fail "Java 21 is required. Select it with JAVA_HOME."
+exec "$java" -jar "$base/kintsugi.jar" "$@"
