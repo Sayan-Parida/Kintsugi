@@ -19,7 +19,7 @@ final class AssessmentCli {
             Kintsugi | read-only JVM shield assurance
               inventory [--json]
               verify-host --profile=FILE [--json]
-              assess --pid=N --shield=NAME --digest=SHA256 [--profile=FILE] [--fixture-pipes] [--json]
+              assess --pid=N --shield=NAME --digest=SHA256 [--profile=FILE] [--closing-profile=FILE] [--fixture-pipes] [--json]
             --fixture-pipes authorizes the named test JVM only. Inherit its stdout on stdin and its stdin on FD 3.
             Exit 0 completed, 1 verification failed, 2 invalid configuration, 3 unknown or incomplete.
             """;
@@ -38,7 +38,7 @@ final class AssessmentCli {
             Set<String> allowed = switch (command) {
                 case "inventory" -> Set.of("json");
                 case "verify-host" -> Set.of("json", "profile");
-                case "assess" -> Set.of("json", "pid", "shield", "digest", "profile", "fixture-pipes");
+                case "assess" -> Set.of("json", "pid", "shield", "digest", "profile", "closing-profile", "fixture-pipes");
                 default -> throw new IllegalArgumentException();
             };
             var options = new HashMap<String,String>();
@@ -62,7 +62,7 @@ final class AssessmentCli {
                 long pid = Long.parseLong(options.get("pid"));
                 if (pid <= 0) throw new IllegalArgumentException();
                 var shield = new Shield(options.get("shield"), options.get("digest"));
-                exit = assess(pid, shield, profile, options.containsKey("fixture-pipes"), report);
+                exit = assess(pid, shield, profile, options.get("closing-profile"), options.containsKey("fixture-pipes"), report);
             } else if (command.equals("verify-host")) {
                 var receipt = receipt(profile, null, report);
                 exit = receipt == null ? 3 : switch (receipt.verification().state()) {
@@ -115,7 +115,7 @@ final class AssessmentCli {
         return r;
     }
 
-    private int assess(long pid, Shield shield, OperatorProfile profile, boolean fixture, Map<String,Object> report)
+    private int assess(long pid, Shield shield, OperatorProfile profile, String closingFile, boolean fixture, Map<String,Object> report)
             throws IOException {
         report.put("pid", pid);
         report.put("shield", shield.name());
@@ -152,11 +152,41 @@ final class AssessmentCli {
                 && intent.process().equals(result.startup().process())) {
             try {
                 result = FixturePipes.assess(proc, service, intent, inventory, c, agent, r);
-                if (result.behavior().qualified()) detail = "closing_host_attestation_missing";
             } catch (java.util.concurrent.TimeoutException timeout) { detail = "fixture_timeout"; }
             catch (Exception unavailable) { detail = "fixture_channel_or_session_invalid"; }
         }
         var reasons = new ArrayList<>(result.reasons());
+        var finished = java.time.Instant.now();
+        report.put("assessmentFinished", finished.toString());
+        System.err.println("assessment_finished=" + finished);
+        OperatorProfile closing = null;
+        OperatorProfile.Receipt last = null;
+        String closingError = null;
+        if (closingFile != null) {
+            long deadline = System.nanoTime() + Duration.ofSeconds(10).toNanos();
+            while (closing == null && System.nanoTime() < deadline) {
+                try {
+                    var loaded = OperatorProfile.load(Path.of(closingFile), JSON);
+                    if (!java.time.Instant.parse(loaded.window().issued()).isBefore(finished)) closing = loaded;
+                    else closingError = "closing_attestation_predates_assessment";
+                } catch (IOException | RuntimeException invalid) { closingError = "closing_profile_invalid_or_missing"; }
+                if (closing == null) {
+                    try { Thread.sleep(100); }
+                    catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); break; }
+                }
+            }
+            if (closing != null && closing.current()) {
+                last = closing.verify(inventory.bootId());
+                closingError = null;
+            }
+        }
+        report.put("closingHostVerification", last == null ? "UNKNOWN" : last.verification().state());
+        report.put("closingHostReason", last == null ? "closing_evidence_unavailable" : last.verification().reason());
+        reasons.addAll(AttestationWindow.validate(profile, r, closing, last, finished, java.time.Instant.now()));
+        if (closingError != null) reasons.add(closingError);
+        try {
+            if (!identity.equals(inspector.identity(pid))) reasons.add("process_identity_changed_after_closing");
+        } catch (IOException | RuntimeException unavailable) { reasons.add("process_identity_inaccessible_after_closing"); }
         if (detail != null) reasons.add(detail);
         if (profile != null && profile.mapping() != null && !inventory.bootId().equals(profile.mapping().bootId()))
             reasons.add("approved_boot_id_mismatch");
@@ -166,7 +196,12 @@ final class AssessmentCli {
         report.put("startup", result.startup().activation());
         if (result.behavior() != null) report.put("behaviour", result.behavior().outcome());
         report.put("reasons", reasons);
-        // A single pre-probe host receipt cannot establish a stable measurement interval.
-        return r != null && r.verification().state() == dev.kintsugi.shirudo.ShirudoCli.State.FAILED ? 1 : 3;
+        if (reasons.isEmpty()) {
+            report.put("coverage", result.conclusion());
+            return result.conclusion() == dev.kintsugi.assurance.Assessment.Conclusion.COVERAGE_GAP
+                    || result.conclusion() == dev.kintsugi.assurance.Assessment.Conclusion.RESIDUAL_EFFECT ? 1 : 0;
+        }
+        return (r != null && r.verification().state() == dev.kintsugi.shirudo.ShirudoCli.State.FAILED)
+                || (last != null && last.verification().state() == dev.kintsugi.shirudo.ShirudoCli.State.FAILED) ? 1 : 3;
     }
 }

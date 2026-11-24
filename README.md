@@ -33,9 +33,21 @@ check. The supervisor must pass the fixture's fresh stdout pipe as CLI stdin and
 pipe as CLI FD 3. Keep those pipes private. The session binds the reply to the native
 verification, payload and JVM lifetime. Reports show host, startup and behavioural
 observations separately. `probeAssessment` is the coverage engine's conclusion for that
-invocation and its supplied evidence. The CLI currently accepts one host receipt. Even a qualified
-observation retains `UNKNOWN` with `closing_host_attestation_missing` until the host
-interval can be verified. Raw verifier output, process arguments and environment are omitted.
+invocation and its supplied evidence. Add `--closing-profile=/secure/operator/closing.json`
+to verify the host interval. After the assessment, stderr emits `assessment_finished`
+with its UTC time. The operator must issue a different challenge after this point,
+collect fresh evidence and publish the closing profile within ten seconds. Use the same
+profile format and independent enrollment. Both profiles must remain within their
+freshness windows through closing verification. Keep the files immutable during each
+verification and restrict their ownership to the trusted operator.
+
+The command requires matching pinned AK, measurement policy, boot identity and shield
+mapping, plus the same TPM reset/restart counts and firmware and a nondecreasing safe
+TPM clock extracted from the natively verified quote. A shield change or retirement,
+invalid native verdict, missing closing evidence or unavailable epoch keeps coverage
+`UNKNOWN`. Startup and behavioural evidence retain their own reasons. Exit 1 also
+indicates a qualified coverage gap or residual effect. Raw verifier output, process
+arguments and environment are omitted.
 
 Omit `--json` for terminal output. Exit codes are 0 for a completed inventory or verified
 host, 1 for native verification failure, 2 for invalid input and 3 for unknown or incomplete

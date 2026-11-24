@@ -12,7 +12,8 @@ record OperatorProfile(String verifier, String evidence, String nonce, Verificat
                        InstantFields window, Mapping mapping) {
     record InstantFields(String issued, String expires) {}
     record Mapping(String bootId, Shield shield, HostState state) {}
-    record Receipt(ShirudoCli.Evidence verification, Host approved, String chain) {}
+    record Receipt(ShirudoCli.Evidence verification, Host approved, String chain, Epoch epoch) {}
+    record Epoch(long reset, long restart, long firmware, long clock) {}
 
     static OperatorProfile load(Path path, ObjectMapper json) throws IOException {
         byte[] bytes;
@@ -41,9 +42,40 @@ record OperatorProfile(String verifier, String evidence, String nonce, Verificat
 
     Receipt verify(String boot) {
         var cli = new ShirudoCli(Path.of(verifier), Duration.ofSeconds(10));
+        byte[] original = null;
+        try { original = evidenceBytes(); } catch (IOException unavailable) { }
         var result = cli.verify(Path.of(evidence), nonce, policy);
+        Epoch epoch = null;
+        try {
+            if (result.state() == ShirudoCli.State.VERIFIED && original != null
+                    && java.util.Arrays.equals(original, evidenceBytes())) {
+                var json = new ObjectMapper().enable(com.fasterxml.jackson.core.JsonParser.Feature.STRICT_DUPLICATE_DETECTION)
+                        .enable(com.fasterxml.jackson.databind.DeserializationFeature.FAIL_ON_TRAILING_TOKENS);
+                var document = json.readTree(original);
+                var b = java.nio.ByteBuffer.wrap(java.util.HexFormat.of().parseHex(
+                        document.path("quote").path("attest").asText()));
+                if (b.getInt() != 0xff544347 || b.getShort() != (short)0x8018) throw new IllegalArgumentException();
+                for (int i = 0; i < 2; i++) {
+                    int length = Short.toUnsignedInt(b.getShort());
+                    b.position(Math.addExact(b.position(), length));
+                }
+                long clock = b.getLong();
+                long reset = Integer.toUnsignedLong(b.getInt());
+                long restart = Integer.toUnsignedLong(b.getInt());
+                if (b.get() != 1) throw new IllegalArgumentException();
+                epoch = new Epoch(reset, restart, b.getLong(), clock);
+            }
+        } catch (IOException | RuntimeException invalid) { }
         Host host = mapping != null && mapping.bootId.equals(boot)
                 ? new Host(mapping.shield, mapping.state, Instant.parse(window.issued)) : null;
-        return new Receipt(result, host, policy.expectedChain());
+        return new Receipt(result, host, policy.expectedChain(), epoch);
+    }
+
+    private byte[] evidenceBytes() throws IOException {
+        try (var in = Files.newInputStream(Path.of(evidence))) {
+            byte[] bytes = in.readNBytes(8 * 1024 * 1024 + 1);
+            if (bytes.length > 8 * 1024 * 1024) throw new IOException();
+            return bytes;
+        }
     }
 }
