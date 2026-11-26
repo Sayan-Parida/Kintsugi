@@ -1,14 +1,16 @@
 # Protected Linux validation
 
-Execution is pending. This repository contains test automation and portable tests.
-There are no recorded protected-guest integration results or production-readiness claims.
+Protected-guest execution has produced partial real results and exposed a fixture
+framing issue, now fixed and regression-tested. A complete fresh-cohort rerun is
+still pending; the separate results below do not establish production readiness.
 
 ## Audit status and trust
 
 The focused audit fixes through e40375a address evidence-file substitution, schema
 overflow, identity-read races, receipt ordering, fixture-channel reuse and installer
 permissions. Review of those paths found no remaining confirmed critical issue.
-This is a scoped review with protected Linux execution still outstanding.
+This is a scoped review. Complete fresh-cohort protected Linux qualification
+remains outstanding; partial execution results are recorded below.
 
 Use a disposable protected Shirudo guest with its approved boot configuration, TPM,
 enrolled operator certificate and unchanged reviewed upstream shield. The approved
@@ -160,3 +162,44 @@ cases in the existing Linux harness guide.
 
 Local checks can validate Python syntax, command help and rejection of a non-Linux
 host. They cannot establish protected boot, native signatures or JVM shield efficacy.
+
+## Recorded controlled-lab execution (2026-11-27)
+
+The actual Java engine ran against the unchanged upstream java-sql-inj shield,
+with genuine fresh opening/closing evidence verified in the WSL operator domain.
+The restricted SSH verifier uses fixed operator-owned AK/PCR/config/chain policy,
+not refreshed guest measurements. This is an explicitly trusted lab observer and
+software TPM, not hostile-host or hardware-rooted assurance.
+
+| Run | Coverage / exit | Opening / closing | Startup / behaviour | Identity |
+| --- | --- | --- | --- | --- |
+| A, initial two-JVM run | COVERAGE_GAP / 1 | VERIFIED / VERIFIED | OPTION_ABSENT / BASELINE_OBSERVED | Stable |
+| B, initial run | UNKNOWN / 3 | VERIFIED / VERIFIED | EXPECTED_OPTION / INCONCLUSIVE | Channel/session rejected |
+| B, corrected-engine live regression | BEHAVIOR_CORROBORATED / 0 | VERIFIED / VERIFIED | EXPECTED_OPTION / GUARD_OBSERVED | Stable |
+| Missing-closing live regression | UNKNOWN / 3 | VERIFIED / UNKNOWN | OPTION_ABSENT / BASELINE_OBSERVED | Stable |
+
+A's closing latency was 3.942 seconds. Corrected B's was 3.494 seconds; its
+reason list was empty. The missing-closing case waited 10.149 seconds and reported
+closing_host_attestation_missing (plus closing_profile_invalid_or_missing).
+
+The confirmed failure was the unchanged upstream premain startup banner on stdout,
+before the fixture ready record. FixturePipes now permits exactly that one literal
+line only for the independently inspected expected SQL agent and matching process.
+Unknown/repeated preambles, malformed records and identity/nonce mismatches remain
+fail-closed. Banner text is not coverage evidence. The normal five-second deadline,
+dedicated-pipe checks, strict ready/check validation and both native attestation
+requirements remain unchanged. Six new framing tests and the existing session,
+CLI, snapshot and closing-window contracts passed (28 targeted tests).
+
+These results span the initial run and a later B/negative-case regression. They
+must not be combined into a claim that the full fresh-cohort procedure passed.
+The first run installed the shield. Its signed retirement leaves a sealed JAR
+placeholder, so the fresh-guest precondition above cannot be bypassed to repeat
+the whole driver. Preserve failed-run records and obtain approval for a fresh
+qualification guest/enrollment rather than deleting the sealed file, resetting
+trusted measurements or removing that precondition.
+
+Raw private evidence, profiles, native receipts and diagnostics remain in the lab;
+no raw evidence, nonces, keys or environment-specific trust configuration is
+committed here. Systemd agent propagation and retirement behavior remain separate
+qualification cases.

@@ -29,7 +29,11 @@ final class FixturePipes {
 
         long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
         var task = new FutureTask<Result>(() -> {
-            var ready = record(System.in);
+            var startup = new JvmStartupInspector(proc).inspect(inventory, candidate, agent);
+            boolean sqlAgent = intent.shield().name().equals("java-sql-inj")
+                    && startup.activation() == Activation.EXPECTED_OPTION
+                    && intent.process().equals(startup.process());
+            var ready = readyRecord(System.in, sqlAgent);
             var session = service.openFixtureSession(true, intent, receipt.approved(), receipt.chain(),
                     receipt.verification(), ready, Duration.ofMinutes(1));
             var before = new JvmStartupInspector(proc).identity(candidate.pid());
@@ -55,6 +59,16 @@ final class FixturePipes {
         if (!link.toString().matches("pipe:\\[[0-9]+\\]") || !link.equals(Files.readSymbolicLink(theirs)))
             throw new IOException();
     }
+    /** One known upstream premain diagnostic may precede ready on this exact fixture pipe. */
+    static String readyRecord(InputStream in, boolean expectedSqlAgent) throws IOException {
+        String line = record(in);
+        if (expectedSqlAgent && line.equals("[RASP Agent] Initializing SQL Injection Shield...")) {
+            line = record(in);
+        }
+        if (!line.startsWith("event=ready\t")) throw new IOException("Expected fixture ready record");
+        return line;
+    }
+
     private static String record(InputStream in) throws IOException {
         var bytes = new ByteArrayOutputStream();
         while (bytes.size() < 8192) {

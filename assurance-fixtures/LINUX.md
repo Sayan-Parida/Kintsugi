@@ -53,7 +53,11 @@ In terminal B as the same ordinary workload owner, launch B with the documented 
 env -u JAVA_TOOL_OPTIONS -u JDK_JAVA_OPTIONS -u _JAVA_OPTIONS /path/to/jdk21/bin/java -XX:-EnableDynamicAgentLoading -javaagent:/run/shirudo-java/java-sql-inj.jar -jar /path/to/assurance-fixtures-0.1.0-alpha.jar B 2>B.stderr | tee B.tsv
 ```
 
-Challenge A and B three times each using fresh UUIDs. Compare label, instance UUID, PID, start instant, boot ID, PID namespace and kernel start ticks across all records. Verify PIDs and start ticks against administrator-observed procfs. A must retain baseline behavior. B must report discriminator=guard_exception, healthy controls and behavior=guard_observed. The expected SecurityException message is checked by the harness. Other errors yield inconclusive. The upstream agent writes its diagnostics to stderr. Preserve those files separately from protocol transcripts.
+Challenge A and B three times each using fresh UUIDs. Compare label, instance UUID, PID, start instant, boot ID, PID namespace and kernel start ticks across all records. Verify PIDs and start ticks against administrator-observed procfs. A must retain baseline behavior. B must report discriminator=guard_exception, healthy controls and behavior=guard_observed. The expected SecurityException message is checked by the harness. Other errors yield inconclusive. The upstream agent writes alert diagnostics to stderr and one exact premain
+startup banner to stdout. The Java fixture-channel reader permits that banner
+once only when independent process inspection confirms the expected SQL agent;
+the ready/check records still require every identity and challenge binding.
+Preserve stderr separately from protocol transcripts.
 
 For the roadmap's environment-propagation case, repeat B under a fresh systemd user manager receiving the generated options, using the existing upstream guarded-JVM test as a reference. Record that launch route separately. The explicit-agent run above qualifies the shield's behavior only for that startup configuration.
 
