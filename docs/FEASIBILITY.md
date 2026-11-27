@@ -1,6 +1,10 @@
 # Feasibility and decisions
 
-**Recommendation.** Build a read-only coverage assessor for one Linux host, multiple long-lived HotSpot JVMs and the upstream `java-sql-inj` shield. Use normal signed Shirudo deployment and service-owner restart for remediation. An open contribution is a repeatable demonstration that two JVMs can disagree under one valid host measurement, with evidence that identifies *which* JVM answered. General live installation and verified in-place removal have unresolved authority and correctness requirements. The findings use [the pinned upstream study](UPSTREAM-ANALYSIS.md). All design choices and test outcomes below are proposals until tested.
+**Recommendation.** Build a read-only coverage assessor for one Linux host, multiple long-lived HotSpot JVMs and the upstream `java-sql-inj` shield. Use normal signed Shirudo deployment and service-owner restart for remediation. The [controlled-lab qualification](../LINUX-VALIDATION.md#complete-fresh-cohort-qualification-2026-11-27)
+demonstrated that two JVMs can disagree under one valid host measurement, with
+evidence identifying which cooperative JVM answered. Generalizing beyond that
+tested process/path/startup configuration remains open. General live installation and verified in-place removal have unresolved authority and correctness requirements. The findings use [the pinned upstream study](UPSTREAM-ANALYSIS.md). Except for that explicitly recorded qualification, unexecuted design choices and
+test scenarios below remain proposals.
 
 ## Capability decisions
 

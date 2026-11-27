@@ -1,11 +1,11 @@
 # Kintsugi
 
 The protected-guest validation driver, prerequisites and real execution procedure
-are documented in [LINUX-VALIDATION.md](LINUX-VALIDATION.md). Protected Linux
-execution remains pending.
+are documented in [LINUX-VALIDATION.md](LINUX-VALIDATION.md). The fresh-cohort
+controlled-lab qualification passed with genuine operator-verified attestations.
 
-Version 0.1.0-alpha is an experimental CLI distribution. Protected Linux end-to-end
-validation remains pending. Production readiness has not been established.
+Version 0.1.0-alpha is an experimental CLI distribution. The scoped Java 21 SQL
+shield qualification passed; production readiness has not been established.
 
 ## Install and remove
 
@@ -124,10 +124,14 @@ JVMs and repeated baseline checks. The packaged fixture also passed a baseline
 smoke test. Windows directory protection required verification from a temporary
 copy whose source hashes matched the project.
 
-Protected Shirudo Linux guest validation remains pending. Qualification requires
-the unchanged signed upstream shield, stable process identities, healthy controls,
-repeatable guarded and baseline outcomes, and independently verified fresh host
-attestations. The current results establish portable harness behavior only.
+A complete fresh protected-guest run at 847f01c distinguished A (COVERAGE_GAP,
+baseline) from B (BEHAVIOR_CORROBORATED, guarded), with both opening and closing
+attestations verified in the trusted operator domain and stable process identities.
+The missing-closing case failed closed as UNKNOWN. Full Maven verification passed
+62 tests. See [sanitized results](docs/validation/sql-shield-847f01c.json) and
+[scope/limitations](LINUX-VALIDATION.md#complete-fresh-cohort-qualification-2026-11-27).
+This is one controlled H2 path with an explicit startup agent and software TPM;
+it does not establish hardware-rooted, hostile-guest or generic JVM assurance.
 
 Kintsugi's original code is licensed under [BSD-2-Clause](LICENSE).
 The Maven Wrapper retains its Apache-2.0 license and notices, listed in

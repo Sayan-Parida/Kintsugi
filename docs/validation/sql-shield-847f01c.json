@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "validationDate": "2026-11-27",
+  "engineCommit": "847f01c0117020ec49a2c11faf6660e387e34efd",
+  "upstreamCommit": "39923c519f601c687a6c95aff40a3733172d5673",
+  "sameControlledRun": true,
+  "freshGuest": true,
+  "supervisorResult": "passed",
+  "mavenVerification": {
+    "tests": 62,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "cases": [
+    {
+      "coverage": "COVERAGE_GAP",
+      "hostVerification": "VERIFIED",
+      "closingHostVerification": "VERIFIED",
+      "startup": "OPTION_ABSENT",
+      "behaviour": "BASELINE_OBSERVED",
+      "reasons": [],
+      "label": "A",
+      "case": "consistent",
+      "closingElapsedSeconds": 2.955,
+      "cliExit": 1,
+      "identityStable": true
+    },
+    {
+      "coverage": "BEHAVIOR_CORROBORATED",
+      "hostVerification": "VERIFIED",
+      "closingHostVerification": "VERIFIED",
+      "startup": "EXPECTED_OPTION",
+      "behaviour": "GUARD_OBSERVED",
+      "reasons": [],
+      "label": "B",
+      "case": "consistent",
+      "closingElapsedSeconds": 2.908,
+      "cliExit": 0,
+      "identityStable": true
+    },
+    {
+      "coverage": "UNKNOWN",
+      "hostVerification": "VERIFIED",
+      "closingHostVerification": "UNKNOWN",
+      "startup": "OPTION_ABSENT",
+      "behaviour": "BASELINE_OBSERVED",
+      "reasons": [
+        "closing_host_attestation_missing",
+        "closing_profile_invalid_or_missing"
+      ],
+      "label": "window",
+      "case": "missing",
+      "closingElapsedSeconds": 10.085,
+      "cliExit": 3,
+      "identityStable": true
+    }
+  ],
+  "artifactSha256": {
+    "cli": "deb50d5bcac9645490f9695dfd2ac265fb9bbf2d5df47de98893de1de5ace706",
+    "fixture": "ecd5fb1ba8a02d916902ced23b4eeb58dc14260e95f13142368131d09b8797db",
+    "payloadDigest": "468360533ffa1c0c5ac7151f0407d0c0381aa308f43ddae26047c3e3e2e211ad"
+  },
+  "scope": [
+    "Java 21 controlled cooperative H2 fixture",
+    "explicit sealed startup agent; dynamic loading disabled",
+    "operator-domain native verifier with fixed approved AK/PCR/config/chain policy",
+    "software TPM and trusted operator/guest observer; no hardware-rooted or hostile-guest claim"
+  ],
+  "notQualified": [
+    "generic JVM protection",
+    "systemd environment propagation",
+    "live agent attachment",
+    "retirement/in-place reversal",
+    "production readiness"
+  ]
+}

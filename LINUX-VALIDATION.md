@@ -1,16 +1,19 @@
 # Protected Linux validation
 
-Protected-guest execution has produced partial real results and exposed a fixture
-framing issue, now fixed and regression-tested. A complete fresh-cohort rerun is
-still pending; the separate results below do not establish production readiness.
+The complete fresh-cohort procedure passed on 2026-11-27 using Java engine commit
+847f01c and the unchanged upstream shield. A and B were assessed in the same
+controlled run with genuine opening/closing evidence verified in the operator
+domain. This is a scoped software-TPM lab qualification, not production readiness.
+[Sanitized machine-readable results](docs/validation/sql-shield-847f01c.json).
 
 ## Audit status and trust
 
 The focused audit fixes through e40375a address evidence-file substitution, schema
 overflow, identity-read races, receipt ordering, fixture-channel reuse and installer
 permissions. Review of those paths found no remaining confirmed critical issue.
-This is a scoped review. Complete fresh-cohort protected Linux qualification
-remains outstanding; partial execution results are recorded below.
+This is a scoped review. The fresh-cohort qualification below passed after the
+narrow stdout-framing fix; the existing identity, nonce and attestation checks
+were retained.
 
 Use a disposable protected Shirudo guest with its approved boot configuration, TPM,
 enrolled operator certificate and unchanged reviewed upstream shield. The approved
@@ -163,7 +166,7 @@ cases in the existing Linux harness guide.
 Local checks can validate Python syntax, command help and rejection of a non-Linux
 host. They cannot establish protected boot, native signatures or JVM shield efficacy.
 
-## Recorded controlled-lab execution (2026-11-27)
+## Earlier diagnostic execution (2026-11-27)
 
 The actual Java engine ran against the unchanged upstream java-sql-inj shield,
 with genuine fresh opening/closing evidence verified in the WSL operator domain.
@@ -203,3 +206,42 @@ Raw private evidence, profiles, native receipts and diagnostics remain in the la
 no raw evidence, nonces, keys or environment-specific trust configuration is
 committed here. Systemd agent propagation and retirement behavior remain separate
 qualification cases.
+
+## Complete fresh-cohort qualification (2026-11-27)
+
+The original supervisor completed successfully in a fresh protected guest using
+engine commit 847f01c. A started before the guarded signed load and remained alive
+while B started afterward with the sealed upstream SQL agent. Both JVMs belonged
+to this one controlled run, not combined earlier/regression results.
+
+| Case | Coverage / exit | Opening / closing | Startup / behaviour | Identity | Closing seconds |
+| --- | --- | --- | --- | --- | --- |
+| A | COVERAGE_GAP / 1 | VERIFIED / VERIFIED | OPTION_ABSENT / BASELINE_OBSERVED | Stable | 2.955 |
+| B | BEHAVIOR_CORROBORATED / 0 | VERIFIED / VERIFIED | EXPECTED_OPTION / GUARD_OBSERVED | Stable | 2.908 |
+| Missing closing | UNKNOWN / 3 | VERIFIED / UNKNOWN | OPTION_ABSENT / BASELINE_OBSERVED | Stable | 10.085 |
+
+A and B had empty reason lists and healthy controls. The negative case reported
+closing_host_attestation_missing and closing_profile_invalid_or_missing. The
+native signed-load receipt matched the independently planned post-load chain.
+Full Maven verification at 847f01c passed all 62 tests, with no failures, errors
+or skips. [Sanitized results and artifact digests](docs/validation/sql-shield-847f01c.json)
+contain only allowlisted assessment fields and public artifact provenance.
+
+The compatible kernel adds PID namespace support to the pinned CI recipe.
+Existing signed bundle trust material was reused. A fresh AK came from the
+trusted host-side pre-boot builder and was explicitly approved; all previously
+approved PCR/config references remained fixed. Fresh baseline verification
+passed before use. The restricted verifier ran the existing native Shirudo
+binary in the WSL operator domain, with independently pinned transport identity.
+No failed check was bypassed and no live measurement was promoted into policy.
+
+Both earlier VM states and enrollment records remain preserved. Raw evidence,
+profiles, nonces, process identifiers, keys and deployment-specific references
+stay in private lab storage. The public result file is sanitized, not a raw
+evidence bundle or independently replayable TPM enrollment.
+
+This run qualifies one fixed H2 Statement path, the explicit Java startup-agent
+route, stable cooperative process identities and this observation interval.
+The host controls swtpm and the guest observer is explicitly trusted. Kernel/UKI
+hardware measurement, hostile-guest remote assurance, generic protection,
+systemd propagation, live attach and retirement/reversal are not established.
