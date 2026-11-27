@@ -1,140 +1,182 @@
 # Kintsugi
 
-The protected-guest validation driver, prerequisites and real execution procedure
-are documented in [LINUX-VALIDATION.md](LINUX-VALIDATION.md). The fresh-cohort
-controlled-lab qualification passed with genuine operator-verified attestations.
+Read-only, per-JVM coverage assessment for Shirudo Java shields.
+**v0.1.0-alpha** is an experimental Java 21 CLI. A complete fresh-guest
+qualification passed; production readiness has not been established.
 
-Version 0.1.0-alpha is an experimental CLI distribution. The scoped Java 21 SQL
-shield qualification passed; production readiness has not been established.
+## The R24 coverage problem
 
-## Install and remove
+Shirudo can authenticate a signed Java shield installed on a host while a JVM
+started earlier still runs without that guard. Startup environment changes,
+service launch routes and per-process options can also leave JVMs with different
+coverage under the same measured host state. This is the upstream **R24**
+residual: an installed artifact and its TPM measurement do not prove that every
+JVM is executing the intended transformation.
 
-Use Linux with Java 21 and a POSIX shell. The bundle scripts use standard Linux
-utilities including tar, sha256sum, sed, head, cp, cmp, mkdir, mktemp, mv and rm.
-Shirudo host verification additionally requires the trusted native verifier and
-its existing permissions and enrollment inputs. The distribution includes the
-application dependencies in its executable JAR. Java and Shirudo are installed separately.
+Kintsugi correlates independently verified host evidence with a particular JVM's
+OS identity, startup configuration and a fresh, nonce-bound cooperative test.
+It reports the evidence dimensions separately. A startup option alone is
+insufficient to establish guard behaviour.
+[Upstream analysis](docs/UPSTREAM-ANALYSIS.md) ·
+[Trust boundaries](docs/THREAT-MODEL.md)
 
-The GitHub Actions **Alpha distribution** workflow builds versioned artifacts
-when run manually or for tag `v0.1.0-alpha`. Download its artifact archive from
-the successful workflow run and extract it. The workflow uploads build artifacts
-and SHA-256 checksums. A checksum detects changed bytes and should be obtained
-from the trusted workflow run along with the artifacts.
+## Validated alpha results
+
+The actual engine at `847f01c` assessed both JVMs in one fresh protected Linux
+run using the unchanged upstream `java-sql-inj` shield:
+
+| JVM | Launch | Coverage / exit | Behaviour | Opening / closing attestations |
+| --- | --- | --- | --- | --- |
+| A | Before shield deployment | COVERAGE_GAP / 1 | BASELINE_OBSERVED | VERIFIED / VERIFIED |
+| B | After deployment, explicit sealed agent | BEHAVIOR_CORROBORATED / 0 | GUARD_OBSERVED | VERIFIED / VERIFIED |
+
+Both identities remained stable, healthy controls passed and both reason lists
+were empty. The missing-closing test returned `UNKNOWN` / exit 3 after 10.085
+seconds. **Full Maven verification passed 62 tests**, with no failures, errors
+or skips. The framing fix accepts one exact upstream premain banner only for
+the independently inspected SQL startup agent; other protocol checks remain strict.
+
+[Sanitized results and artifact digests](docs/validation/sql-shield-847f01c.json) ·
+[Procedure and limitations](LINUX-VALIDATION.md)
+
+## Architecture
+
+| Maven module | Responsibility |
+| --- | --- |
+| `assurance-core` | Pure Java evidence records, fixture challenge/session binding and coverage reduction; no Spring dependency. |
+| `shirudo-cli` | Bounded native Shirudo calls, strict JSON parsing and operator-supplied verification policy. Shirudo performs the cryptography. |
+| `linux-jvm` | Read-only procfs inventory, process lifetime/namespace/executable identity and startup-option inspection. |
+| `orchestrator` | Spring Boot command-line wiring, profiles, observation windows and reports; no web server or embedded agent. |
+| `assurance-fixtures` | Cooperative H2 test JVM and protocol tests. The signed upstream shield is an external input. |
+
+Operator policy and native verification establish host-state evidence. Procfs
+and private fixture pipes establish observer-scoped process and behaviour evidence.
+The core combines these into a per-process conclusion. The administrator deploys
+the shield separately; Kintsugi does not sign shields, enroll trust or remediate JVMs.
+
+[Architecture details](docs/ARCHITECTURE.md) ·
+[Coverage semantics](assurance-core/COVERAGE.md) ·
+[Native adapter](shirudo-cli/README.md)
+
+## Install on Linux
+
+Requirements: Java **21**, a POSIX shell and GNU/Linux utilities used by the
+scripts: tar, sha256sum, sed, head, cp, cmp, mkdir, mktemp, mv, rm, rmdir, ln,
+stat, id and chmod. Select Java with `JAVA_HOME` or PATH.
+
+Download these manual release assets together:
+
+- `kintsugi-0.1.0-alpha-linux.tar.gz`: launcher, installer, uninstaller, JAR and notices/licenses.
+- `kintsugi-0.1.0-alpha.jar`: standalone executable JAR.
+- `RELEASE-NOTES.md`.
+- `SHA256SUMS`.
+
+Obtain the checksums from the trusted release publication. They detect byte
+changes; they are not signatures or an independent source of publisher identity.
 
 ```sh
 sha256sum -c SHA256SUMS
 tar -xzf kintsugi-0.1.0-alpha-linux.tar.gz
 cd kintsugi-0.1.0-alpha
+export JAVA_HOME=/absolute/path/to/jdk-21
 sh install.sh
 export PATH="$HOME/.local/bin:$PATH"
 kintsugi --help
 kintsugi inventory --json
 ```
 
-Installation defaults to `$HOME/.local/bin/kintsugi` and
-`$HOME/.local/lib/kintsugi` and requires no root access. Select Java using
-`JAVA_HOME` or PATH. Both launcher and installer check for Java 21.
-An existing installation is preserved and must be removed before replacement.
-For a custom absolute prefix use `sh install.sh --prefix /absolute/prefix`
-and add that prefix's bin directory to PATH.
+The default prefix is `$HOME/.local`; no root access is required.
+For another user-owned absolute prefix:
 
 ```sh
-kintsugi verify-host --profile=/secure/operator/run.json
-kintsugi assess --pid="$pid" --shield="$name" --digest="$payload_sha256" --json
-sh "$HOME/.local/lib/kintsugi/uninstall.sh"
-# Custom prefix: sh /absolute/prefix/lib/kintsugi/uninstall.sh --prefix /absolute/prefix
+sh install.sh --prefix /absolute/user-owned/prefix
+/absolute/user-owned/prefix/bin/kintsugi --help
 ```
 
-Removal deletes only the named installed files and preserves operator profiles
-and evidence. Profiles are supplied explicitly with `--profile` and
-`--closing-profile` as documented below. Store them in an operator-controlled
-directory. The installer does not create profiles or enroll trust.
+The installer refuses existing installations, symlink installation directories
+and directories writable by other users. Java and Shirudo are installed separately.
+The installer does not deploy the shield, configure a verifier or create profiles.
 
-The standalone JAR also runs with `java -jar kintsugi-0.1.0-alpha.jar --help`.
-For a local distribution build run Maven verification, then
-`sh distribution/package.sh` on Linux. Artifacts appear in `target/dist`.
+## Developer and operator usage
 
-Kintsugi is a Java 21 project for assessing Shirudo Java shield coverage in individual JVMs. Its Linux CLI inventories visible Java launchers, invokes Shirudo's native attestation verifier, and reports per-JVM evidence.
+Use Java 21 and the Maven Wrapper. The local distribution smoke test also needs
+`jq` and GNU `find`. No GitHub Actions run is needed:
 
 ```sh
-sh ./mvnw verify
+export JAVA_HOME=/absolute/path/to/jdk-21
+sh ./mvnw --batch-mode --no-transfer-progress verify
 jar=orchestrator/target/orchestrator-0.1.0-alpha.jar
 java -jar "$jar" --help
 java -jar "$jar" inventory --json
-java -jar "$jar" verify-host --profile=/secure/operator/run.json
-java -jar "$jar" assess --pid="$pid" --shield="$name" --digest="$payload_sha256" --json
+sh distribution/package.sh
+sh testing/distribution_smoke.sh
 ```
 
-On Windows, use `mvnw.cmd verify` for the build. Run inventory on Linux.
+Release assets appear in `target/dist`. See [release notes](RELEASE-NOTES.md)
+for manual publication. On Windows, `mvnw.cmd verify` builds the Java project;
+Linux procfs is required for inventory and process assessment.
 
-Use `verify-host` in the trusted operator environment. Supply a protected JSON profile with
-absolute `verifier` and `evidence` paths, the fresh verifier-issued hex `nonce` (16–64 bytes),
-and `window` with UTC `issued` and `expires` instants at most 60 seconds apart. The
-`policy` object requires `akName`, `expectedChain`, `bindPcr9`, `bindPcr11`, `configRoot`,
-numeric `configPcr` and `bootPcrs` (a PCR-number-to-digest object). Use independently
-enrolled values, a trusted verifier binary, and immutable evidence. The operator owns
-nonce uniqueness. An expired profile requires a fresh challenge.
+Run native verification in the trusted operator domain using an operator-owned
+profile with absolute verifier/evidence paths, a fresh nonce, a UTC observation
+window and independently enrolled AK/PCR/config/chain expectations:
 
-For `assess`, pass the PID from inventory and the intended shield name and signed payload
-digest. Without a profile the command still reads JVM startup evidence. A trusted operator
-with access to the workload's procfs can add `--profile=FILE` with an approved `mapping`
-object containing `bootId`, `state` (`VERIFIED_PRESENT` or `VERIFIED_RETIRED`), and
-`shield` with `name` and `payloadDigest`. Keep independent verification on the trusted
-side of the deployment boundary.
+```sh
+kintsugi verify-host --profile=/secure/operator/run.json --json
+kintsugi assess --pid="$pid" --shield="$name" --digest="$payload_sha256" --json
+```
 
-For a supervised H2 test JVM, `--fixture-pipes` explicitly authorizes one fixed read-only
-check. The supervisor must pass the fixture's fresh stdout pipe as CLI stdin and its stdin
-pipe as CLI FD 3. Keep those pipes private. The session binds the reply to the native
-verification, payload and JVM lifetime. Reports show host, startup and behavioural
-observations separately. `probeAssessment` is the coverage engine's conclusion for that
-invocation and its supplied evidence. Add `--closing-profile=/secure/operator/closing.json`
-to verify the host interval. After the assessment, stderr emits `assessment_finished`
-with its UTC time. The operator must issue a different challenge after this point,
-collect fresh evidence and publish the closing profile within ten seconds. Use the same
-profile format and independent enrollment. Both profiles must remain within their
-freshness windows through closing verification. Keep the files immutable during each
-verification and restrict their ownership to the trusted operator.
+The passive assessment command can report incomplete evidence. Qualified fixture
+assessment additionally needs opening/closing profiles, the authorized workload's
+procfs and dedicated inherited pipes. Use the existing
+[protected qualification supervisor](LINUX-VALIDATION.md) and
+[fixture guide](assurance-fixtures/LINUX.md). `--fixture-pipes` is for that
+explicitly authorized cooperative test process, not a probe of an arbitrary JVM.
 
-The command requires matching pinned AK, measurement policy, boot identity and shield
-mapping, plus the same TPM reset/restart counts and firmware and a nondecreasing safe
-TPM clock extracted from the natively verified quote. A shield change or retirement,
-invalid native verdict, missing closing evidence or unavailable epoch keeps coverage
-`UNKNOWN`. Startup and behavioural evidence retain their own reasons. Exit 1 also
-indicates a qualified coverage gap or residual effect. Raw verifier output, process
-arguments and environment are omitted.
+Profiles carry `policy`, `nonce`, `evidence`, `window` and, for coverage,
+an approved shield/boot mapping. The operator owns nonce uniqueness. Opening and
+closing evidence must satisfy the same approved policy and TPM epoch; missing,
+expired, contradictory or unverifiable evidence cannot yield positive coverage.
+Keep profiles immutable during verification and privately retain raw evidence.
 
-Omit `--json` for terminal output. Exit codes are 0 for a completed inventory or verified
-host, 1 for native verification failure, 2 for invalid input and 3 for unknown or incomplete
-evidence. Inventory is limited to the observer's visible launchers.
+Exit codes are command-specific: 0 for a completed/verified result, 1 for failed
+verification or a qualified coverage gap/residual effect, 2 for invalid input,
+and 3 for unknown/incomplete evidence. Successful inventory is not a coverage verdict.
 
-The standalone H2 shield fixture and protected-guest execution steps are in
-[the Linux harness guide](assurance-fixtures/LINUX.md).
+## Remove
 
-The harness supports independently identifiable, long-lived JVMs, repeated
-nonce-bound checks with fixed read-only queries, and process health records.
-The assessment core has no Spring dependencies. Spring Boot runs the command
-line orchestration. The [Shirudo adapter](shirudo-cli/README.md) collects host reports
-and invokes the native verifier. The [coverage engine](assurance-core/COVERAGE.md)
-correlates approved host evidence, passive JVM startup clues and qualified
-behavioral observations against the intended shield and process lifetime.
+Run the uninstaller for the installation's prefix:
 
-The Java 21 Maven build includes portable tests for evidence assessment, process
-identity, native CLI failure handling, two concurrent fixture
-JVMs and repeated baseline checks. The packaged fixture also passed a baseline
-smoke test. Windows directory protection required verification from a temporary
-copy whose source hashes matched the project.
+```sh
+sh "$HOME/.local/lib/kintsugi/uninstall.sh"
+# Custom prefix:
+sh /absolute/user-owned/prefix/lib/kintsugi/uninstall.sh --prefix /absolute/user-owned/prefix
+```
 
-A complete fresh protected-guest run at 847f01c distinguished A (COVERAGE_GAP,
-baseline) from B (BEHAVIOR_CORROBORATED, guarded), with both opening and closing
-attestations verified in the trusted operator domain and stable process identities.
-The missing-closing case failed closed as UNKNOWN. Full Maven verification passed
-62 tests. See [sanitized results](docs/validation/sql-shield-847f01c.json) and
-[scope/limitations](LINUX-VALIDATION.md#complete-fresh-cohort-qualification-2026-11-27).
-This is one controlled H2 path with an explicit startup agent and software TPM;
-it does not establish hardware-rooted, hostile-guest or generic JVM assurance.
+Removal deletes only named installation files. Operator profiles, evidence and
+unrelated files are retained. A changed launcher or unrecognized installation is
+refused. Additional files inside the application directory are preserved and
+reported; inspect them manually before removing that directory. Remove an existing
+installation before installing a replacement.
 
-Kintsugi's original code is licensed under [BSD-2-Clause](LICENSE).
-The Maven Wrapper retains its Apache-2.0 license and notices, listed in
-[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+The standalone asset needs no installation:
+`java -jar kintsugi-0.1.0-alpha.jar --help`.
 
-[Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md)
+## Security and qualification limits
+
+The validated case covers one fixed H2 Statement path, explicit startup-agent
+loading and one bounded interval in cooperative JVMs. The lab used a host-controlled
+software TPM and explicitly trusted guest observer, with native verification in
+the operator domain. It establishes no hardware-rooted or hostile-guest assurance,
+generic JVM protection or production readiness. The direct-boot CI kernel is a
+lab kernel; compatible protected validation also needs real PID namespace identity.
+
+Systemd environment propagation, general live attach and retirement/in-place
+reversal remain separate, unqualified cases. Kintsugi does not attest Java
+bytecode. Do not refresh trusted measurements from target output or relax failed
+checks to obtain a positive report.
+
+Required validation tooling is retained under `testing/`. Raw lab records,
+keys and environment-specific enrollment policy are excluded from release assets.
+
+Kintsugi is [BSD-2-Clause](LICENSE).
+[Third-party notices](THIRD-PARTY-NOTICES.md) · [Roadmap](docs/ROADMAP.md)

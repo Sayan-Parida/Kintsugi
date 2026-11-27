@@ -19,5 +19,7 @@ if [ -e "$prefix/bin/kintsugi" ] || [ -L "$prefix/bin/kintsugi" ]; then
 fi
 # Only named installation files are removed. User configuration and evidence are retained.
 rm -f -- "$app/kintsugi.jar" "$app/kintsugi" "$app/LICENSE" "$app/NOTICE" "$app/THIRD-PARTY-NOTICES.md" "$app/INSTALLATION" "$app/uninstall.sh"
+rm -f -- "$app/licenses/Apache-2.0.txt"
+rmdir -- "$app/licenses" 2>/dev/null || :
 rmdir -- "$app" || fail "Additional files remain in $app. They were preserved."
 printf 'Removed Kintsugi from %s. Configuration and evidence files were retained.\n' "$prefix"

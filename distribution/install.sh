@@ -15,7 +15,7 @@ for tool in cp mkdir chmod mv mktemp rm rmdir ln stat id; do
     command -v "$tool" >/dev/null || fail "Required utility is unavailable: $tool"
 done
 src=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-for file in kintsugi kintsugi.jar uninstall.sh LICENSE NOTICE THIRD-PARTY-NOTICES.md; do
+for file in kintsugi kintsugi.jar uninstall.sh LICENSE NOTICE THIRD-PARTY-NOTICES.md licenses/Apache-2.0.txt; do
     [ -f "$src/$file" ] || fail "Incomplete bundle: missing $file"
 done
 [ ! -e "$prefix/bin/kintsugi" ] && [ ! -L "$prefix/bin/kintsugi" ] ||
@@ -32,10 +32,14 @@ done
 stage=$(mktemp -d "$prefix/lib/.kintsugi-install.XXXXXX")
 cleanup() {
     rm -f -- "$stage/kintsugi" "$stage/kintsugi.jar" "$stage/uninstall.sh" "$stage/LICENSE" "$stage/NOTICE" "$stage/THIRD-PARTY-NOTICES.md" "$stage/INSTALLATION"
+    rm -f -- "$stage/licenses/Apache-2.0.txt"
+    rmdir -- "$stage/licenses" 2>/dev/null || :
     rmdir -- "$stage" 2>/dev/null || :
 }
 trap cleanup EXIT HUP INT TERM
 cp -- "$src/kintsugi" "$src/kintsugi.jar" "$src/uninstall.sh" "$src/LICENSE" "$src/NOTICE" "$src/THIRD-PARTY-NOTICES.md" "$stage/"
+mkdir "$stage/licenses"
+cp -- "$src/licenses/Apache-2.0.txt" "$stage/licenses/"
 printf '%s\n' 'kintsugi-0.1.0-alpha' > "$stage/INSTALLATION"
 chmod 755 "$stage/kintsugi" "$stage/uninstall.sh"
 if [ -n "${JAVA_HOME:-}" ]; then java=$JAVA_HOME/bin/java; else java=$(command -v java) || fail "Java 21 is required."; fi
